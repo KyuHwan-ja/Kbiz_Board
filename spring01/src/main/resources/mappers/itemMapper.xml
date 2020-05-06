@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+	<mapper namespace="item">
+
+<!-- 	itemList 페이지 보여줄시 다보여주고 ajax를 이욯해서 카테고리 데이터 넣어주기 -->
+	<select id="itemCago"  resultType="hashmap">
+		<![CDATA[
+			SELECT CDNO, CDNAME FROM CODEMNG WHERE UPCD='C0001'
+		]]>
+	</select>
+
+<!-- 	 카테고리 값 선택시 1차 분류 데이터 넣어주기 -->
+	<select id="underCago"  resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT CDNO, CDNAME FROM CODEMNG WHERE UPCD=#{cdNo}
+		]]>
+	</select>
+	
+<!-- 	조회 버튼 시 리스트 넣어주기 -->
+	<select id="cagoList"  resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT IT.ITEMCD, IT.ITEMNAME, IT.MADENMCD, CD.CDNAME as MADENAME, IT.ITEMUNITCD, CCD.CDNAME as UNITNAME, IT.STOCKAMT, IT.STOCKYN, IT.USEYN FROM ITEMLIST IT
+					INNER JOIN CODEMNG CD 
+					ON IT.MADENMCD=CD.CDNO AND IT.ITEMCLSCD = #{cdNo}
+						INNER JOIN CODEMNG CCD
+						 	ON IT.ITEMUNITCD=CCD.CDNO
+		]]>
+	</select>
+	
+<!-- 	에이작스 안쓰고 그냥(input hidden 안에 값을 넣어주고) 서브밋하는 sql 쿼리 -->
+	<select id="cagoListNoAjax"  resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT IT.ITEMCD, IT.ITEMNAME, IT.MADENMCD, CD.CDNAME as MADENAME, IT.ITEMUNITCD, CCD.CDNAME as UNITNAME, IT.STOCKAMT, IT.STOCKYN, IT.USEYN FROM ITEMLIST IT
+					INNER JOIN CODEMNG CD 
+					ON IT.MADENMCD=CD.CDNO AND IT.ITEMCLSCD = #{cdNo}
+						INNER JOIN CODEMNG CCD
+						 	ON IT.ITEMUNITCD=CCD.CDNO
+		]]>
+	</select>
+	
+<!-- 	 ajax로 뿌린 리스트 한줄 클릭시 제조사 옵션 박스 가져오기  -->
+	<select id="madeNameCago"  resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT cdno, CDNAME FROM CODEMNG
+			START WITH UPCD='C0050'
+			CONNECT BY PRIOR CDNO=UPCD
+			order by case WHEN CDNO IN (#{madeNmCd}) THEN 1 ELSE 2 END, CDNO
+		]]>
+	</select>
+	
+	<!-- 	 ajax로 뿌린 리스트 한줄 클릭시 단위명 옵션 박스 가져오기  -->
+	<select id="unitNameCago"  resultType="hashmap" parameterType="hashmap">
+		<![CDATA[
+			SELECT cdno, CDNAME FROM CODEMNG
+			START WITH UPCD='C0060'
+			CONNECT BY PRIOR CDNO=UPCD
+			order by case WHEN CDNO IN (#{unitNmCd}) THEN 0 ELSE 1 END, CDNO
+		]]>
+	</select>
+	
+<!-- 	 ajax로 뿌린 리스트 한줄 클릭시 itemCd 받아서 필요한 데이터 보내주기 -->
+	<select id="itemView"  parameterType="map" resultType="hashmap">
+		<![CDATA[
+             SELECT IT.ITEMCD, IT.ITEMNAME, CD.CDNAME AS MADENAME, CCD.CDNAME AS UNITNAME, IT.USEYN, IT.STOCKAMT FROM ITEMLIST IT
+             		INNER JOIN CODEMNG CD
+             				ON IT.MADENMCD=CD.CDNO AND IT.ITEMCD=#{itemCd}
+             				   	INNER JOIN CODEMNG CCD
+             				   	   ON IT.ITEMUNITCD=CCD.CDNO
+      		]]>       				   	   
+	</select>
+	
+<!-- 	아이템 리스트 데이터 수정하기 -->
+	<update id="itemUpdate" parameterType="hashmap">
+			 update itemlist set itemname =#{itemName}, madenmcd=#{madeNmCd}, itemUnitCd=#{itemUnitCd}, USEYN=#{useYN} where itemcd=#{itemCd}     
+	</update>
+	
+<!-- 		아이템 리스트 데이터 추가하기 -->
+	<insert id="itemInsert" parameterType="hashmap">
+			INSERT INTO itemList(itemCd, itemName, madeNmCd, itemUnitCd, useYN, insUser, insDate, itemClsCd) 
+			VALUES((select  'I' || LPAD(NVL(SUBSTR(MAX(ITEMCD),2) + 1, 1), 4, '0')  from ITEMLIST), #{itemName}, #{madeNmCd}, #{itemUnitCd}, #{useYN}, '관리자', SYSDATE, #{itemClsCd})
+	</insert>
+<!-- 	<update id="cdNameUpdate" parameterType="hashmap"> -->
+<!-- 			 update codemng set cdname = #{cdName} where cdno = ( select madenmcd from itemlist where itemcd = #{itemCd}) -->
+<!-- 	</update> -->
+	
+<!-- 	<update id="itemUnitCdUpdate" parameterType="hashmap"> -->
+<!-- 			 update itemlist set itemunitcd = #{itemUnitCd} where itemcd=#{itemCd} -->
+<!-- 	</update> -->
+	
+	
+	
+</mapper>

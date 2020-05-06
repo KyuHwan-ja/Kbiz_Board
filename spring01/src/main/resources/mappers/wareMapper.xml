@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+	<mapper namespace="ware">
+	
+<!-- 	입고리스트를 위한 메퍼 -->
+	<select id="wareHouseList" resultType="hashmap" parameterType="hashmap">
+		select ini.ITEMCD, it.itemName, it.madeNmCd, cd.cdName as madeName, it.itemUnitCd, ccd.cdName as unitName, ini.INSAMT   from INITEMLIST ini 
+			inner join ITEMLIST it
+			on ini.itemcd=it.itemcd
+			inner join codemng cd
+			on it.madeNmCd = cd.cdNo
+			inner join CODEMNG ccd
+			on it.itemUnitCd = ccd.cdNo and it.itemClsCd=#{cdNo} where to_char(ini.INSDATE) = TO_CHAR(SYSDATE)
+	</select>
+	
+<!-- 	ajax로 뿌린  금일 입고 리스트 한줄 클릭시 itemCd 받아서 필요한 데이터 보내주기 -->
+	<select id="wareView"  parameterType="map" resultType="hashmap">
+		<![CDATA[
+           SELECT IT.ITEMCD, IT.ITEMNAME, CD.CDNAME AS MADENAME, CCD.CDNAME AS UNITNAME, IT.USEYN, ini.insAmt, ini.insItemListCd FROM ITEMLIST IT
+             		INNER JOIN CODEMNG CD
+             				ON IT.MADENMCD=CD.CDNO AND IT.ITEMCD=#{itemCd}
+             				   	INNER JOIN CODEMNG CCD
+             				   	   ON IT.ITEMUNITCD=CCD.CDNO
+             				   	   	inner join INITEMLIST ini
+             				   	   		on it.itemCd = ini.itemCd and to_char(ini.INSDATE) = TO_CHAR(SYSDATE)
+      		]]>       				   	   
+	</select>
+	
+<!-- 	금일 입고 리스트에 데이터 넣을때에 db에서  기존 값이 있는지 체크 -->
+	<select id="db_check" parameterType="String" resultType="int">
+		select count(*) from INITEMLIST where ITEMCD=#{itemCd} and to_char(INSDATE) = TO_CHAR(SYSDATE)
+	</select>
+	
+<!-- 	 입고db(inItemList)에  수량을 넣는다 .금일 입고 리스트 -->
+	<insert id="db_insert" parameterType="hashmap" >
+		 insert into INITEMLIST(itemCd, insItemListCd, insAmt, insDate, insUser)
+			VALUES(#{itemCd}, (select  'II' || LPAD(NVL(SUBSTR(MAX(insItemListCd),3) + 1, 1), 8, '0') from INITEMLIST), #{insAmt}, SYSDATE, '관리자' )
+	</insert>
+	
+<!-- 	 입고 db에 넣은후 itemList 테이블에 stockAmt 수정 -->
+	<update id="db_FirstItemListUpdate" parameterType="hashmap">
+		update itemList set stockAmt = stockAmt + #{insAmt} where itemCd = #{itemCd}
+	</update>
+	
+<!-- 	 입고db(inItemList)에 금일 입고 값이 이미 값이 있는 경우 / itemList 에서 initemList 의 기존에 있던 수량을 빼주고, 바뀐 수량을 더해준다 -->
+	<update id="db_itemListUpdate" parameterType="hashmap">
+		update ITEMLIST set STOCKAMT = STOCKAMT-(select INSAMT from INITEMLIST where ITEMCD=#{itemCd} and to_char(INSDATE) = TO_CHAR(SYSDATE)) + #{insAmt} where ITEMCD=#{itemCd}
+	</update>
+	
+<!-- 	 inItemList 테이블에 금일 입고 값이 들어있는 경우 / initemList 안 기존의 데이터, 수량을 수정한다.  -->
+	<update id="db_wareUpdate" parameterType="hashmap">
+		update INITEMLIST set INSAMT = #{insAmt} WHERE ITEMCD=#{itemCd} and to_char(INSDATE) = TO_CHAR(SYSDATE)
+	</update>
+	
+<!-- 	<insert id="insertWare" parameterType="hashmap"> -->
+<!-- 		<![CDATA[ -->
+<!-- 			DECLARE -->
+<!-- 				N_itemCd  NUMBER := 0; -->
+<!-- 				BEGIN -->
+<!-- 				 select count(*) INTO N_itemCd from INITEMLIST where ITEMCD='I0309'; -->
+<!-- 				if N_itemCd > 0 THEN -->
+<!-- 				 delete from INITEMLIST where ITEMCD='I0309'; -->
+<!-- 				ELSIF N_itemCd = 0 THEN -->
+<!-- 				 insert into INITEMLIST(itemCd, insItemListCd, insAmt, insDate, insUser) -->
+<!-- 						VALUES('I0309', (select  'II' || LPAD(NVL(SUBSTR(MAX(insItemListCd),3) + 1, 1), 8, '0') from INITEMLIST), 30, SYSDATE, 'kyuTest' ); -->
+<!-- 				end if;	 -->
+<!-- 				END; -->
+<!-- 		]]> -->
+<!-- 	</insert> -->
+	
+	
+	
+</mapper>

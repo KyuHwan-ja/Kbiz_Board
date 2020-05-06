@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+	<mapper namespace="out">
+<!-- 금일 출고 리스트 뿌리기  -->
+	<select id="outItemList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			select out.itemCd, it.itemName, it.madeNmCd, cd.cdName AS MADENAME, ccd.cdName AS UNITNAME, out.delivAmt, 
+			use.id, out.CHECKUSER, cccd.cdName, useDe.addrCd, useDe.addrName, useDe.mobileTelNo, useDe.homeTelNo, out.checkYN, out.delivYN,
+			out.OUTITEMLISTCD, out.delivCorpCd  
+			from OUTITEMLIST out
+				inner join ITEMLIST IT
+				ON it.itemCd=out.itemCd 
+					inner join CODEMNG cd
+					on it.madeNmCd=cd.cdNo
+						INNER JOIN CODEMNG CCD
+						ON IT.ITEMUNITCD=CCD.CDNO
+							inner join userInfoDetail useDe
+							ON useDe.userInfoDetailCd=out.userInfoDetailCd
+								inner join userInfo use
+								on use.id=useDe.id
+									INNER join CODEMNG cccd
+									on useDe.relCd=cccd.cdNo order by out.outItemListCd desc
+		]]>
+	</select>
+	
+<!--  금일 출고리스트  한줄 클릭시 그 내용 보여주기 -->
+	<select id="outView" parameterType="hashmap" resultType="hashmap">
+		select out.itemCd, it.itemName, cd.cdName AS MADENAME, ccd.cdName AS UNITNAME, out.delivAmt, 
+			use.id, out.CHECKUSER, cccd.cdName as relName, useDe.addrCd, useDe.addrName, useDe.mobileTelNo, useDe.homeTelNo, out.checkYN, out.delivYN,
+			out.OUTITEMLISTCD, ccccd.cdName as delivName, out.DELIVNO, out.userInfoDetailCd  
+			from OUTITEMLIST out
+				inner join ITEMLIST IT
+				ON it.itemCd=out.itemCd 
+					inner join CODEMNG cd
+					on it.madeNmCd=cd.cdNo
+						INNER JOIN CODEMNG CCD
+						ON IT.ITEMUNITCD=CCD.CDNO
+							inner join userInfoDetail useDe
+							ON useDe.userInfoDetailCd=out.userInfoDetailCd
+								inner join userInfo use
+								on use.id=useDe.id
+									INNER join CODEMNG cccd
+									on useDe.relCd=cccd.cdNo AND out.outItemListCd=#{outItemListCdList}
+										INNER JOIN CODEMNG ccccD
+										on ccccd.cdNo=out.delivCorpCd
+	</select>
+	
+<!-- 	금일 출고 리스트에서 한줄 클릭시 아래 배송회사 셀렉트 박스 값 넣기 -->
+	<select id="delivNameCago" resultType="hashmap" parameterType="hashmap">
+		SELECT cdno, CDNAME FROM CODEMNG
+			START WITH UPCD='C0080'
+			CONNECT BY PRIOR CDNO=UPCD
+						order by case WHEN CDNO IN (#{delivCorpCd}) THEN 0 ELSE 1 END, CDNO
+	</select>
+	
+<!-- 	금일 출고에서 수정값이 배송여부가 N 일때 금일 출고리스트에 값을 수정한다. -->
+	<update id="outItemUpdate" parameterType="hashmap">
+		UPDATE OUTITEMLIST set CHECKYN=#{checkYN}, DELIVYN=#{delivYN}, DELIVCORPCD=#{delivName}, DELIVNO=#{delivNo} WHERE OUTITEMLISTCD=#{outItemListCd}
+	</update>
+	
+<!-- 	금일 출고에서 수정값이 배송여부가 Y 일때 금일 출고리스트에 값을 추가한다. -->
+	<insert id="outItemInsert" parameterType="hashmap">
+		INSERT INTO OUTITEMLIST(itemCd, userInfoDetailCd, outItemListCd, delivAmt, checkUser, checkDate, checkYN, delivYN, delivCorpCd, delivNo, insUser, insDate) 
+		VALUES(#{itemCd}, #{userInfoDetailCd}, (SELECT 'OI' || LPAD(NVL(SUBSTR(MAX(outItemListCd),3)+1,1), 8, '0') FROM outItemList),
+		 #{delivAmt}, #{checkUser}, SYSDATE, #{checkYN}, #{delivYN}, #{delivName}, #{delivNo}, '관리자', SYSDATE )
+	</insert>
+	
+<!-- 	금일 출고에서 수정값이 배송여부가 Y 일때 상품리스트의 재고 숫자에서 값을 빼준다. -->
+	<update id="outItemAmtUpdate" parameterType="hashmap">
+		update itemlist set STOCKAMT=STOCKAMT - #{delivAmt} where itemCd=#{itemCd}
+	</update>
+
+<!-- 		itemList 테이블에서 상품코드에 대한 수량을 가져온다. -->
+	<select id="chek_outWare" parameterType="hashmap" resultType="Integer">
+		select count(*) from OUTITEMLIST where INSDATE=TO_CHAR(SYSDATE, 'YY/MM/DD') and OUTITEMLISTCD=#{outItemListCd}
+	</select>
+
+<!-- 	 itemList 테이블에 재고 숫자 값 추가 -->
+	<update id="outItemAmtAdd" parameterType="hashmap">
+		update itemlist set stockAmt = stockAmt + #{delivAmt} where itemCd = #{itemCd}
+	</update>
+
+
+
+
+ <!-- 	전체 데이터의 갯수 가져오기 totalRow --> 
+<!-- 	<select id="getTotalRow" resultType="Integer"> -->
+<!-- 		SELECT COUNT(*) FROM CODEMNG -->
+<!-- 	</select> -->
+	
+<!-- 	<select id="view" parameterType="map" resultType="hashmap"> -->
+<!-- 		SELECT CDNO, CDLVL, UPCD, CDNAME, USEYN FROM CODEMNG WHERE CDNO=#{cdNo} -->
+<!-- 	</select> -->
+	
+<!-- 	<update id="codeUpdate" parameterType="hashmap"> -->
+<!-- 		UPDATE CODEMNG SET CDLVL=#{cdLvl}, UPCD=#{upCd}, CDNAME=#{cdName}, USEYN=#{useYN} WHERE CDNO=#{cdNo} -->
+<!-- 	</update> -->
+	
+<!-- 	<insert id="codeInsert" parameterType="hashmap"> -->
+<!-- 		INSERT INTO CODEMNG(CDNO, CDLVL, UPCD, CDNAME, USEYN, INSUSER, INSDATE)  -->
+<!-- 		VALUES((SELECT 'C'||LPAD(NVL(SUBSTR(MAX(CDNO),2)+1,1),4,'0') FROM CODEMNG), #{cdLvl}, #{upCd}, #{cdName}, #{useYN}, '관리자', SYSDATE ) -->
+<!-- 	</insert> -->
+</mapper>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+	<mapper namespace="code">
+
+<!-- 	코드 리스트 페이지 리스트 뿌리기 -->
+	<select id="codeList" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			SELECT * FROM (SELECT ROWNUM RNUM, CDNO, CDLVL, UPCD, CDNAME, USEYN FROM (SELECT CDNO, CDLVL, UPCD, CDNAME, USEYN FROM CODEMNG
+			START WITH UPCD ='1'
+			CONNECT BY PRIOR CDNO=UPCD)) WHERE RNUM BETWEEN #{startRow} AND #{endRow}
+		]]>
+	</select>
+	
+<!-- 	전체 데이터의 갯수 가져오기 totalRow -->
+	<select id="getTotalRow" resultType="Integer">
+		SELECT COUNT(*) FROM CODEMNG
+	</select>
+	
+<!-- 	코드 리스트에서 하나 선택시 그 내용 아래에 뿌려주기 -->
+	<select id="view" parameterType="map" resultType="hashmap">
+		SELECT CDNO, CDLVL, UPCD, CDNAME, USEYN FROM CODEMNG WHERE CDNO=#{cdNo}
+	</select>
+	
+<!-- 		 코드 수정 처리 -->
+	<update id="codeUpdate" parameterType="hashmap">
+		UPDATE CODEMNG SET CDLVL=#{cdLvl}, UPCD=#{upCd}, CDNAME=#{cdName}, USEYN=#{useYN} WHERE CDNO=#{cdNo}
+	</update>
+	
+<!-- 		코드 추가 처리 -->
+	<insert id="codeInsert" parameterType="hashmap">
+		INSERT INTO CODEMNG(CDNO, CDLVL, UPCD, CDNAME, USEYN, INSUSER, INSDATE) 
+		VALUES((SELECT 'C'||LPAD(NVL(SUBSTR(MAX(CDNO),2)+1,1),4,'0') FROM CODEMNG), #{cdLvl}, #{upCd}, #{cdName}, #{useYN}, '관리자', SYSDATE )
+	</insert>
+</mapper>

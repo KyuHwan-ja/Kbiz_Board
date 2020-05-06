@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+	
+	<mapper namespace="member">
+
+<!-- // 로그인 처리 -->
+	<select id="loginCheck" parameterType="hashmap" resultType="String">
+		<![CDATA[
+			SELECT NAME FROM USERINFO WHERE ID=#{id} AND PASS=#{pass}
+		]]>	
+	</select>
+	
+<!-- 	아이디 중복체크 처리 -->
+	<select id="selectUserID" parameterType="hashmap" resultType="hashmap">
+		<![CDATA[
+			select count(id) as result from userinfo where id=#{id}
+		]]>
+	</select>
+
+<!-- 	회원가입처리 아이디 비밀번호 성명 db에 저장 -->
+	<insert id="join">
+			INSERT INTO USERINFO(ID, PASS, NAME, INSDATE) VALUES(#{id}, #{pass},  #{name}, SYSDATE)
+	</insert>
+	
+<!-- 	 회원 가입 상세 페이지 처리  -->
+<!-- 	null을 허용하려면 jdbcType=VARCHAR 추가, date 타입일 경우 jdbcType=DATE, number 타입일 경우는 jdbcType=INTEGER 설정 -->
+	<insert id="joinDetail">
+		INSERT INTO USERINFODETAIL(USERINFODETAILCD, ID, RELCD, ADDRCD, ADDRNAME, DELIVNAME, MOBILETELNO, HOMETELNO, USEYN)
+		<![CDATA[ 
+		VALUES((SELECT 'U' || LPAD(NVL(SUBSTR(MAX(USERINFODETAILCD),2)+1,1), 8, '0') FROM USERINFODETAIL),
+		]]>
+		 #{id}, #{relCd}, #{addrCd}, #{addrName}, #{delivName}, #{mobileTelNo, jdbcType=VARCHAR}, #{homeTelNo, jdbcType=VARCHAR}, #{useYN} )
+	</insert>
+</mapper>
